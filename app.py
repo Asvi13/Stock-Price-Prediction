@@ -24,9 +24,7 @@ st.set_page_config(
 @st.cache_data
 def load_data():
     df = pd.read_csv("dataset/stock_data.csv")
-
     df["date"] = pd.to_datetime(df["date"])
-
     return df
 
 
@@ -52,7 +50,8 @@ st.sidebar.divider()
 
 st.sidebar.info(
     "This application uses Linear Regression "
-    "to estimate the next day's closing price."
+    "to estimate the next day's closing price "
+    "and identify its predicted direction."
 )
 
 
@@ -375,7 +374,7 @@ with st.expander("Understand the metrics"):
 
 
 # ==========================================
-# 15. MANUAL PRICE PREDICTION
+# 15. NEXT-DAY PRICE AND DIRECTION PREDICTION
 # ==========================================
 
 st.divider()
@@ -383,7 +382,9 @@ st.divider()
 st.header("🔮 Predict Next Day Closing Price")
 
 st.write(
-    f"Enter trading details for {selected_stock}."
+    f"Enter trading details for {selected_stock}. "
+    "The system will estimate the next closing price "
+    "and its expected direction."
 )
 
 col1, col2 = st.columns(2)
@@ -459,13 +460,81 @@ if st.button("🔮 Predict Next Day Price", type="primary"):
             columns=features
         )
 
-        predicted_price = model.predict(input_data)[0]
+        predicted_price = float(
+            model.predict(input_data)[0]
+        )
+
+        # Calculate expected price change
+        price_change = predicted_price - close_price
+
+        if close_price > 0:
+            percentage_change = (
+                price_change / close_price
+            ) * 100
+        else:
+            percentage_change = 0.0
+
+        # Determine expected direction
+        if predicted_price > close_price:
+
+            direction = "📈 UP"
+
+            direction_message = (
+                "The model estimates that the next closing "
+                "price may be higher than the entered closing price."
+            )
+
+        elif predicted_price < close_price:
+
+            direction = "📉 DOWN"
+
+            direction_message = (
+                "The model estimates that the next closing "
+                "price may be lower than the entered closing price."
+            )
+
+        else:
+
+            direction = "➡️ NO CHANGE"
+
+            direction_message = (
+                "The model estimates that the next closing "
+                "price may remain the same."
+            )
 
         st.success("Prediction completed successfully!")
 
-        st.metric(
-            f"{selected_stock} Predicted Closing Price",
-            f"${predicted_price:.2f}"
+        # Display prediction results
+        result1, result2, result3 = st.columns(3)
+
+        with result1:
+
+            st.metric(
+                f"{selected_stock} Predicted Next-Day Price",
+                f"${predicted_price:.2f}"
+            )
+
+        with result2:
+
+            st.metric(
+                "Predicted Stock Direction",
+                direction
+            )
+
+        with result3:
+
+            st.metric(
+                "Expected Price Change",
+                f"${price_change:+.2f}",
+                delta=f"{percentage_change:+.2f}%"
+            )
+
+        st.info(direction_message)
+
+        st.caption(
+            "UP means the predicted price is higher than the entered "
+            "closing price. DOWN means it is lower. NO CHANGE means "
+            "both prices are equal."
         )
 
 
@@ -477,5 +546,6 @@ st.divider()
 
 st.caption(
     "Educational project only. Stock prices are uncertain. "
-    "Predictions are estimates and are not financial advice."
+    "Predictions are estimates based on historical data and "
+    "are not financial advice."
 )
